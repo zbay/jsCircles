@@ -17,9 +17,12 @@
 			return date.getTime();
 		}
 
+		// log the time when the click is initiated
 		document.onmousedown = function(e){
 			mousedown_time = getTime();
 		}
+
+		// when click concludes, log the time difference between the start and end
 		document.onmouseup = function(e){
 			time_pressed = getTime() - mousedown_time;
 			console.log('You held your mouse down for', time_pressed, 'miliseconds.');
