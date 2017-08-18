@@ -13,7 +13,10 @@
 	<svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
 
 	<script>
-	
+	//todo: include mass in collisions, and use the distance formula between centers to detect collisions
+
+	var circleRadius = 10;
+
 	// Circle takes an x center, y center, and an id
 	function Circle(cx, cy, r, html_id)
 	{
@@ -90,6 +93,7 @@
 	{
 		var counter = 0;  //counts the number of circles created
 		var circles = [ ]; //array that will hold all the circles created in the app
+		var lastCollisions = [];
 
 		// set SVG to width of browser. partial fix of Bug #1
 		var canvas = document.getElementById('svg');
@@ -102,10 +106,49 @@
 			{
 				circles[circle].update(1);
 			}
+			handleCollisions();
 		}
 
-		this.createNewCircle = function(x,y){
-			var new_circle = new Circle(x,y,10,counter++);
+		// this function handles collisions between circles
+		function handleCollisions(){
+			for(var i = 0; i < circles.length; i += 1){
+				for(var j = i+1; j < circles.length; j += 1){
+					// check proximity of the two circles
+					if( (Math.abs((circles[i].info.cx - circles[j].info.cx)) < (circles[i].info.r + circles[j].info.r) ) && (Math.abs((circles[i].info.cy - circles[j].info.cy)) < (circles[i].info.r + circles[j].info.r)) ){
+						
+						// trade velocities, mass adjusted
+						var tempVelocityX = circles[i].info.velocity.x;
+						var tempVelocityY = circles[i].info.velocity.y;
+						circles[i].info.velocity.x = circles[j].info.velocity.x * (circles[j].info.r / circles[i].info.r);
+						circles[j].info.velocity.x = tempVelocityX * (circles[i].info.r / circles[j].info.r);
+						circles[i].info.velocity.y = circles[j].info.velocity.y * (circles[j].info.r / circles[i].info.r);
+						circles[j].info.velocity.y = tempVelocityY * (circles[i].info.r / circles[j].info.r);
+
+						//end any overlap that exists
+						var biggerCircle = circles[i].info.r >= circles[j].info.r ? circles[i] : circles[j];
+						var smallerCircle = circles[i].info.r < circles[j].info.r ? circles[i] : circles[j];
+						// while the smaller circle is inside the bigger one, progress its position according to its velocity
+						while((Math.abs((smallerCircle.info.cx - biggerCircle.info.cx)) < (smallerCircle.info.r + biggerCircle.info.r) ) && (Math.abs((smallerCircle.info.cy - biggerCircle.info.cy)) < (smallerCircle.info.r + biggerCircle.info.r))){
+							smallerCircle.update(0.2);
+							biggerCircle.update(0.1);
+						}
+					}
+				}
+			}
+		}
+
+		this.spaceOccupied = function(x, y, r){
+			for(var i = 0; i < circles.length; i += 1){
+				if( (Math.abs((circles[i].info.cx - x)) <= (r + circles[i].info.r) ) && (Math.abs((circles[i].info.cy - y)) <= (r + circles[i].info.r))){
+					return true;
+				}
+			}
+			return false;
+		}
+
+		this.createNewCircle = function(x,y,r=10){
+			var new_circle = new Circle(x,y,r,counter++);
+			console.log(new_circle);
 			circles.push(new_circle);
 			// console.log('created a new circle!', new_circle);
 		}
@@ -119,18 +162,36 @@
 	//update every 15 ms
 	setInterval(playground.loop, 15);
 
-	// create new circle centered at the click point
-	document.onclick = function(e) {
-		console.log();
-		playground.createNewCircle(e.x,e.y,10);
-	}
-
 	//on browser resize, adjust svg height and width accordingly. Partial fix of Bug #1
 	window.addEventListener('resize', function(e){
 		var canvas = document.getElementById('svg');
 		canvas.setAttribute('height', document.body.clientHeight);
 		canvas.setAttribute('width', document.body.clientWidth);
 	});
+
+	var mousedown_time;
+
+	// helps get time between clicks
+	function getTime(){
+		var date = new Date();
+		return date.getTime();
+	}
+
+	// record the time when the click is initiated
+	document.onmousedown = function(e){
+		mousedown_time = getTime();
+	}
+
+	// when click concludes, record the time difference between the start and end and generate a circle accordingly
+	document.onmouseup = function(e){
+		var time_pressed = getTime() - mousedown_time;
+		// create new circle centered at the click point
+		// avoids placing a circle somewhere buggy (near a border or an existing circle)
+		var radius = time_pressed / 10;
+		if(e.x > radius && e.y > radius && !playground.spaceOccupied(e.x, e.y, radius)){
+			playground.createNewCircle(e.x,e.y, radius);
+		}
+	}
 	</script>
 
 </body>
