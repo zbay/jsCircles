@@ -22,7 +22,7 @@
 	{
 		var html_id = html_id;
 
-		this.info = { cx: cx,  cy: cy, r:r};
+		this.info = { cx: cx,  cy: cy, r:r, collidingWith: undefined};
 		
 		//private function that generates a random number
 		var randomNumberBetween = function(min, max){
@@ -113,24 +113,28 @@
 		function handleCollisions(){
 			for(var i = 0; i < circles.length; i += 1){
 				for(var j = i+1; j < circles.length; j += 1){
-					// check proximity of the two circles
-					if( (Math.abs((circles[i].info.cx - circles[j].info.cx)) < (circles[i].info.r + circles[j].info.r) ) && (Math.abs((circles[i].info.cy - circles[j].info.cy)) < (circles[i].info.r + circles[j].info.r)) ){
-						
-						// trade velocities, mass adjusted
-						var tempVelocityX = circles[i].info.velocity.x;
-						var tempVelocityY = circles[i].info.velocity.y;
-						circles[i].info.velocity.x = circles[j].info.velocity.x * (circles[j].info.r / circles[i].info.r);
-						circles[j].info.velocity.x = tempVelocityX * (circles[i].info.r / circles[j].info.r);
-						circles[i].info.velocity.y = circles[j].info.velocity.y * (circles[j].info.r / circles[i].info.r);
-						circles[j].info.velocity.y = tempVelocityY * (circles[i].info.r / circles[j].info.r);
+					// check proximity of the two circles. with distance formula
+					if(Math.sqrt(Math.pow(circles[i].info.cx - circles[j].info.cx, 2) + Math.pow(circles[i].info.cy - circles[j].info.cy, 2)) <= (circles[i].info.r + circles[j].info.r)){
+					//if( (Math.abs((circles[i].info.cx - circles[j].info.cx)) < (circles[i].info.r + circles[j].info.r) ) && (Math.abs((circles[i].info.cy - circles[j].info.cy)) < (circles[i].info.r + circles[j].info.r)) ){
+						//if there's not already a collision between these two circles, in progress
+						if(circles[i].info.collidingWith !== j){
+							// trade velocities, size-adjusted
+							var tempVelocityX = circles[i].info.velocity.x;
+							var tempVelocityY = circles[i].info.velocity.y;
+							circles[i].info.velocity.x = circles[j].info.velocity.x * (circles[j].info.r / circles[i].info.r);
+							circles[j].info.velocity.x = tempVelocityX * (circles[i].info.r / circles[j].info.r);
+							circles[i].info.velocity.y = circles[j].info.velocity.y * (circles[j].info.r / circles[i].info.r);
+							circles[j].info.velocity.y = tempVelocityY * (circles[i].info.r / circles[j].info.r);
 
-						//end any overlap that exists
-						var biggerCircle = circles[i].info.r >= circles[j].info.r ? circles[i] : circles[j];
-						var smallerCircle = circles[i].info.r < circles[j].info.r ? circles[i] : circles[j];
-						// while the smaller circle is inside the bigger one, progress its position according to its velocity
-						while((Math.abs((smallerCircle.info.cx - biggerCircle.info.cx)) < (smallerCircle.info.r + biggerCircle.info.r) ) && (Math.abs((smallerCircle.info.cy - biggerCircle.info.cy)) < (smallerCircle.info.r + biggerCircle.info.r))){
-							smallerCircle.update(0.2);
-							biggerCircle.update(0.1);
+							circles[i].info.collidingWith = j;
+							circles[j].info.collidingWith = i;
+						}
+					}
+					// reset collision once resolved
+					else{
+						if(circles[i].info.collidingWith === j){
+							circles[i].info.collidingWith = undefined;
+							circles[j].info.collidingWith = undefined;
 						}
 					}
 				}
@@ -139,7 +143,7 @@
 
 		this.spaceOccupied = function(x, y, r){
 			for(var i = 0; i < circles.length; i += 1){
-				if( (Math.abs((circles[i].info.cx - x)) <= (r + circles[i].info.r) ) && (Math.abs((circles[i].info.cy - y)) <= (r + circles[i].info.r))){
+				if(Math.sqrt(Math.pow(circles[i].info.cx - x, 2) + Math.pow(circles[i].info.cy - y, 2)) <= (circles[i].info.r + r)){
 					return true;
 				}
 			}
